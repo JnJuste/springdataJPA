@@ -2,7 +2,6 @@ package com.jnjuste.springdatajpa.controller;
 
 import com.jnjuste.springdatajpa.entity.Product;
 import com.jnjuste.springdatajpa.service.ProductService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
