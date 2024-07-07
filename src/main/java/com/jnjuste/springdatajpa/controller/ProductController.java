@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api")
@@ -20,7 +21,7 @@ public class ProductController {
         this.productService = productService;
     }
 
-    // 1. POST Method (Save new product)
+    // 1. POST Method (Inserting New Product)
     @PostMapping("/saveProduct")
     public ResponseEntity<Product> saveProductEntity(
             @RequestBody Product product){
@@ -49,20 +50,25 @@ public class ProductController {
     // 4. PUT Method (To Update Product Information By ID)
     @PutMapping("/updateProduct/{id}")
     public ResponseEntity<Product> updateProduct(@PathVariable("id") Long id, @RequestBody Product product) {
-        Product existingProduct = productService.findProductById(id);
-        if(existingProduct != null){
-            Product updatedProduct = new Product();
-            updatedProduct.setProductId(id);
-            updatedProduct.setSku(product.getSku());
-            updatedProduct.setProductName(product.getProductName());
-            updatedProduct.setProductDescription(product.getProductDescription());
-            updatedProduct.setPrice(product.getPrice());
-            updatedProduct.setActive(product.isActive());
-            updatedProduct.setImageUrl(product.getImageUrl());
-            updatedProduct.setLastUpdated(product.getLastUpdated());
-            return new ResponseEntity<>(productService.saveProduct(updatedProduct), HttpStatus.OK);
-        } else {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        try {
+            Product existingProduct = productService.findProductById(id);
+            if (existingProduct == null) {
+                return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            }
+
+            // Update fields of existing product
+            existingProduct.setSku(product.getSku());
+            existingProduct.setProductName(product.getProductName());
+            existingProduct.setProductDescription(product.getProductDescription());
+            existingProduct.setPrice(product.getPrice());
+            existingProduct.setActive(product.isActive());
+            existingProduct.setImageUrl(product.getImageUrl());
+
+            // Save the updated product
+            Product updatedProduct = productService.updateProductById(id, existingProduct);
+            return new ResponseEntity<>(updatedProduct, HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -73,6 +79,54 @@ public class ProductController {
             productService.deleteProductById(id);
             return new ResponseEntity<>(HttpStatus.NO_CONTENT);
         } catch (Exception ex) {
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    // 6. PUT Method (Update a ProductName by ID)
+    @PutMapping("/updateProductName/{id}")
+    public ResponseEntity<Product> updateProductName(@PathVariable("id") Long id, @RequestBody Map<String, String> body) {
+        try {
+            String newProductName = body.get("productName");
+            if (newProductName == null) {
+                return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+            }
+
+            Product existingProduct = productService.findProductById(id);
+            if (existingProduct == null) {
+                return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            }
+
+            // Update only the product name
+            existingProduct.setProductName(newProductName);
+
+            // Save the updated product
+            Product updatedProduct = productService.updateProductById(id, existingProduct);
+            return new ResponseEntity<>(updatedProduct, HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    // 6. GET Method (To get products which are available in stock(active and inactive or both)
+    @GetMapping("/productsInStock")
+    public ResponseEntity<List<Product>> getProductsInStock(@RequestParam(required = false) Boolean active) {
+        try {
+            List<Product> products;
+            if (active != null) {
+                // If 'active' parameter is provided, filter by active status
+                products = productService.findProductsAvailableInStock(active.toString());
+            } else {
+                // If 'active' parameter is not provided, return all products
+                products = productService.findAllProducts();
+            }
+
+            if (products.isEmpty()) {
+                return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+            }
+
+            return new ResponseEntity<>(products, HttpStatus.OK);
+        } catch (Exception e) {
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
